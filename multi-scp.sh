@@ -1,5 +1,6 @@
 #/usr/bin/sh
-# This is a script to copy files from one host to a group of hosts
+# Copy files from one host to a group of hosts.
+# I'm not the original author. Credit goes to someone named avronius.
 
 # SOURCE FILE
 SOURCE=$1
