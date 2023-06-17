@@ -1,25 +1,43 @@
-#/usr/bin/sh
-# Copy files from one host to a group of hosts.
-# I'm not the original author. Credit goes to someone named avronius.
+#!/bin/bash
+
+# Function to display script usage
+usage() {
+    echo "Usage: $0 <source_file> <target_directory> <hosts_file> <ssh_key>"
+    exit 1
+}
+
+# Check that the appropriate number of arguments are supplied
+if [ "$#" -ne 4 ]; then
+    usage
+fi
 
 # SOURCE FILE
-SOURCE=$1
+SOURCE="$1"
 # TARGET DIRECTORY/FILE
-TARGET=$2
+TARGET="$2"
 # FILE CONTAINING LIST OF HOSTS
-HOSTS=$3
+HOSTS="$3"
 # SSH KEY
-ID=$4
+ID="$4"
 
-if [ -f $SOURCE ]
-then
-   printf "File found, preparing to transfer\n"
-   while read server
-   do
-      scp -i $ID -p $SOURCE ${server}:$TARGET
-   done < $HOSTS
-else
-   printf "File \"$SOURCE\" not found\n"
-   exit 0
-fi
-exit 0
+# Function to copy files to remote hosts
+copy_files() {
+    if [ -f "$SOURCE" ]; then
+        echo "File found, preparing to transfer"
+        
+        if [ -f "$HOSTS" ]; then
+            while read -r server; do
+                scp -i "$ID" -p "$SOURCE" "${server}:$TARGET"
+            done < "$HOSTS"
+        else
+            echo "Hosts file \"$HOSTS\" not found"
+            exit 1
+        fi
+    else
+        echo "Source file \"$SOURCE\" not found"
+        exit 1
+    fi
+}
+
+# Call the copy_files function
+copy_files
