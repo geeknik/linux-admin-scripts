@@ -1,2 +1,4 @@
 # Linux System Administration
-Scripts to make life easier on your local BOFH
+BOFH scripts to make life easier
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6S1MHNPY) 
