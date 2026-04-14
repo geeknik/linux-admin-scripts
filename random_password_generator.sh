@@ -1,10 +1,56 @@
-#!/bin/bash
-DEFAULT_PASS_LEN=30
-DEFAULT_CHAR_SET='A-Za-z0-9!@#$%^&*()-=_+[]{}|;:,.<>?/~`'
-read -p "Enter desired password length (default is $DEFAULT_PASS_LEN): " PASS_LEN
-PASS_LEN=${PASS_LEN:-$DEFAULT_PASS_LEN}
-read -p "Enter desired character set (default is $DEFAULT_CHAR_SET): " CHAR_SET
-CHAR_SET=${CHAR_SET:-$DEFAULT_CHAR_SET}
-PASSWORD=$(head /dev/urandom | tr -dc "$CHAR_SET" | fold -w ${PASS_LEN} | head -n 1)
-PASSWORD=$(echo $PASSWORD | sed 's/\(.\)/\1\n/g' | awk '{ if (rand() > 0.5) print toupper($0); else print tolower($0); }' ORS='')
-echo "Your random password is: $PASSWORD" # generate robust random password
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly DEFAULT_PASS_LEN=30
+readonly DEFAULT_CHAR_SET='A-Za-z0-9_@%+=:,./-'
+
+usage() {
+  cat <<USAGE
+Usage: $0 [-l LENGTH] [-c CHARSET]
+
+Options:
+  -l LENGTH    Password length (default: ${DEFAULT_PASS_LEN})
+  -c CHARSET   Characters to allow in password generation (tr character class)
+  -h           Show this help
+USAGE
+}
+
+pass_len="$DEFAULT_PASS_LEN"
+char_set="$DEFAULT_CHAR_SET"
+
+while getopts ':l:c:h' opt; do
+  case "$opt" in
+    l) pass_len="$OPTARG" ;;
+    c) char_set="$OPTARG" ;;
+    h)
+      usage
+      exit 0
+      ;;
+    :)
+      echo "Missing value for -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+    ?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if ! [[ "$pass_len" =~ ^[0-9]+$ ]] || (( pass_len < 12 )); then
+  echo "Password length must be an integer >= 12." >&2
+  exit 1
+fi
+
+set +o pipefail
+password="$(tr -dc "$char_set" </dev/urandom | head -c "$pass_len")"
+set -o pipefail
+
+if (( ${#password} < pass_len )); then
+  echo "Unable to generate password with requested settings. Try a broader character set." >&2
+  exit 1
+fi
+
+printf 'Your random password is: %s\n' "$password"
