@@ -1,16 +1,55 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Set the threshold percentage for disk usage
-THRESHOLD=80
+readonly DEFAULT_THRESHOLD=80
+readonly DEFAULT_EMAIL="admin@example.com"
 
-# Set the email address to receive the alert
-EMAIL="admin@example.com"
+usage() {
+  cat <<USAGE
+Usage: $0 [-t threshold_percent] [-e email]
 
-# Get the current disk usage percentage
-USAGE=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+Options:
+  -t threshold_percent   Alert threshold (default: ${DEFAULT_THRESHOLD})
+  -e email               Alert destination (default: ${DEFAULT_EMAIL})
+  -h                     Show help
+USAGE
+}
 
-# Check if the usage exceeds the threshold
-if [ $USAGE -gt $THRESHOLD ]; then
-  # Send an email alert
-  echo "Disk usage on $(hostname) is at ${USAGE}%." | mail -s "Disk Usage Alert" $EMAIL
+threshold="$DEFAULT_THRESHOLD"
+email="$DEFAULT_EMAIL"
+
+while getopts ':t:e:h' opt; do
+  case "$opt" in
+    t) threshold="$OPTARG" ;;
+    e) email="$OPTARG" ;;
+    h)
+      usage
+      exit 0
+      ;;
+    :)
+      echo "Missing value for -$OPTARG" >&2
+      exit 1
+      ;;
+    ?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if ! [[ "$threshold" =~ ^[0-9]+$ ]] || (( threshold < 1 || threshold > 99 )); then
+  echo "Threshold must be an integer between 1 and 99." >&2
+  exit 1
+fi
+
+if ! command -v mail >/dev/null 2>&1; then
+  echo "mail command is required but not installed." >&2
+  exit 1
+fi
+
+usage_percent="$(df --output=pcent / | tail -n 1 | tr -dc '0-9')"
+
+if (( usage_percent > threshold )); then
+  printf 'Disk usage on %s is %s%% (threshold: %s%%).\n' "$(hostname)" "$usage_percent" "$threshold" \
+    | mail -s "Disk Usage Alert" -- "$email"
 fi
