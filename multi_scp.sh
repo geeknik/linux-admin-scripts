@@ -1,43 +1,35 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Function to display script usage
 usage() {
-    echo "Usage: $0 <source_file> <target_directory> <hosts_file> <ssh_key>"
-    exit 1
+  cat <<USAGE
+Usage: $0 <source_file> <target_path> <hosts_file> <ssh_key>
+USAGE
+  exit 1
 }
 
-# Check that the appropriate number of arguments are supplied
-if [ "$#" -ne 4 ]; then
-    usage
+if [[ $# -ne 4 ]]; then
+  usage
 fi
 
-# SOURCE FILE
-SOURCE="$1"
-# TARGET DIRECTORY/FILE
-TARGET="$2"
-# FILE CONTAINING LIST OF HOSTS
-HOSTS="$3"
-# SSH KEY
-ID="$4"
+source_file="$1"
+target_path="$2"
+hosts_file="$3"
+ssh_key="$4"
 
-# Function to copy files to remote hosts
-copy_files() {
-    if [ -f "$SOURCE" ]; then
-        echo "File found, preparing to transfer"
-        
-        if [ -f "$HOSTS" ]; then
-            while read -r server; do
-                scp -i "$ID" -p "$SOURCE" "${server}:$TARGET"
-            done < "$HOSTS"
-        else
-            echo "Hosts file \"$HOSTS\" not found"
-            exit 1
-        fi
-    else
-        echo "Source file \"$SOURCE\" not found"
-        exit 1
-    fi
-}
+[[ -f "$source_file" ]] || { echo "Source file not found: $source_file" >&2; exit 1; }
+[[ -f "$hosts_file" ]] || { echo "Hosts file not found: $hosts_file" >&2; exit 1; }
+[[ -f "$ssh_key" ]] || { echo "SSH key not found: $ssh_key" >&2; exit 1; }
 
-# Call the copy_files function
-copy_files
+while IFS= read -r raw_host; do
+  host="$(printf '%s' "$raw_host" | xargs)"
+
+  # Ignore blank lines and comments.
+  [[ -z "$host" || "$host" =~ ^# ]] && continue
+
+  echo "Transferring to $host ..."
+  scp -i "$ssh_key" -p \
+    -o BatchMode=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -- "$source_file" "${host}:$target_path"
+done < "$hosts_file"
