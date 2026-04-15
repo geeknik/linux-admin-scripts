@@ -50,28 +50,29 @@ while IFS=':' read -r username _ uid gid _ home shell_path; do
   [[ -d "$ssh_dir" ]] || continue
 
   current_ssh_mode="$(stat -c '%a' "$ssh_dir")"
-  current_ssh_owner="$(stat -c '%U:%G' "$ssh_dir")"
+  current_ssh_owner="$(stat -c '%u:%g' "$ssh_dir")"
+  expected_owner="${uid}:${gid}"
 
-  if [[ "$current_ssh_mode" != "700" || "$current_ssh_owner" != "${username}:${username}" ]]; then
-    echo "ISSUE user=${username} path=${ssh_dir} mode=${current_ssh_mode} owner=${current_ssh_owner} expected=700 ${username}:${username}"
+  if [[ "$current_ssh_mode" != "700" || "$current_ssh_owner" != "$expected_owner" ]]; then
+    echo "ISSUE user=${username} path=${ssh_dir} mode=${current_ssh_mode} owner=${current_ssh_owner} expected=700 ${expected_owner}"
     issues_found=1
     if [[ "$auto_fix" == "true" ]]; then
       chmod 700 "$ssh_dir"
-      chown "${username}:${username}" "$ssh_dir"
+      chown "${uid}:${gid}" "$ssh_dir"
       echo "FIXED user=${username} path=${ssh_dir}"
     fi
   fi
 
   if [[ -f "$auth_keys_file" ]]; then
     current_key_mode="$(stat -c '%a' "$auth_keys_file")"
-    current_key_owner="$(stat -c '%U:%G' "$auth_keys_file")"
+    current_key_owner="$(stat -c '%u:%g' "$auth_keys_file")"
 
-    if [[ "$current_key_mode" != "600" || "$current_key_owner" != "${username}:${username}" ]]; then
-      echo "ISSUE user=${username} path=${auth_keys_file} mode=${current_key_mode} owner=${current_key_owner} expected=600 ${username}:${username}"
+    if [[ "$current_key_mode" != "600" || "$current_key_owner" != "$expected_owner" ]]; then
+      echo "ISSUE user=${username} path=${auth_keys_file} mode=${current_key_mode} owner=${current_key_owner} expected=600 ${expected_owner}"
       issues_found=1
       if [[ "$auto_fix" == "true" ]]; then
         chmod 600 "$auth_keys_file"
-        chown "${username}:${username}" "$auth_keys_file"
+        chown "${uid}:${gid}" "$auth_keys_file"
         echo "FIXED user=${username} path=${auth_keys_file}"
       fi
     fi

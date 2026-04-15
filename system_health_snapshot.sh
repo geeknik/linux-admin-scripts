@@ -71,7 +71,6 @@ validate_percent "Disk threshold" "$disk_threshold"
 validate_percent "Memory threshold" "$memory_threshold"
 require_command df
 require_command awk
-require_command systemctl
 
 root_disk_usage="$(df --output=pcent / | tail -n 1 | tr -dc '0-9')"
 mem_usage="$(calc_memory_percent)"
@@ -80,7 +79,7 @@ timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
 status="ok"
 systemd_available="false"
-if [[ -d /run/systemd/system ]] && systemctl show-environment >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1 && [[ -d /run/systemd/system ]] && systemctl show-environment >/dev/null 2>&1; then
   systemd_available="true"
 fi
 
